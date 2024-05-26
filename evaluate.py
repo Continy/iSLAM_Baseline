@@ -10,6 +10,7 @@ import pypose as pp
 import numpy as np
 import os
 from tqdm import tqdm
+import gc
 
 EDN2NED = pp.from_matrix(
     torch.tensor([[0., 0., 1., 0.], [1., 0., 0., 0.], [0., 1., 0., 0.],
@@ -69,7 +70,7 @@ if __name__ == '__main__':
         std = [0.229, 0.224, 0.225]
 
         transform = Compose([
-            CropCenter((448, 640), fix_ratio=True),
+            CropCenter(cropsize, fix_ratio=True),
             DownscaleFlow(),
             Normalize(mean=mean, std=std, keep_old=True),
             ToTensor(),
@@ -111,3 +112,7 @@ if __name__ == '__main__':
         np.save(Path(args.savepath) / 'npy' / f'{subset}.npy', poses_np)
         np.savetxt(Path(args.savepath) / 'txt' / f'{subset}.txt', poses_np)
         print(f'{path} done')
+
+        del dataset, dataloader, tartanvo, motion_list, poses, poses_np
+        gc.collect()
+        torch.cuda.empty_cache()
