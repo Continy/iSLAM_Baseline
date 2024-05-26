@@ -159,7 +159,7 @@ class TartanAirTrajFolderLoader:
 
         #     self.has_imu = True
         # else:
-        #     self.has_imu = False
+        self.has_imu = False
 
 
 class TartanAirV2TrajFolderLoader:
@@ -168,6 +168,7 @@ class TartanAirV2TrajFolderLoader:
 
         ############################## load images ######################################################################
         imgfolder = datadir + '/image_lcam_front'
+        self.has_imu = False
         files = listdir(imgfolder)
         self.rgbfiles = [(imgfolder + '/' + ff) for ff in files
                          if (ff.endswith('.png') or ff.endswith('.jpg'))]
@@ -342,7 +343,7 @@ class EuRoCTrajFolderLoader:
         #     self.has_imu = True
 
         # else:
-        #     self.has_imu = False
+        self.has_imu = False
 
 
 class KITTITrajFolderLoader:
