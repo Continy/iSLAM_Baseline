@@ -21,3 +21,5 @@ DATASETS:
     soulcity/Data/P009,
     soulcity/Data/P010,
   ]
+VO_MODEL: ./models/stereo_cvt_tartanvo_1914.pkl
+POSE_MODEL: null

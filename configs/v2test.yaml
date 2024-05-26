@@ -32,3 +32,5 @@ DATASETS:
     tartanair_v2_test/Data_hard/P012,
     tartanair_v2_test/Data_hard/P013,
   ]
+VO_MODEL: ./models/stereo_cvt_tartanvo_1914.pkl
+POSE_MODEL: null

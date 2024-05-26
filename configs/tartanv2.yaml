@@ -36,3 +36,5 @@ DATASETS:
     CoalMine/Data_hard/P004,
     CoalMine/Data_hard/P005,
   ]
+VO_MODEL: ./models/stereo_cvt_tartanvo_1914.pkl
+POSE_MODEL: null
