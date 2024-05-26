@@ -54,7 +54,7 @@ if __name__ == '__main__':
     elif args.data_type == 'v2':
         cropsize = (640, 640)
     elif args.data_type == 'euroc':
-        cropsize = (448, 640)
+        cropsize = (448, 704)
     else:
         raise ValueError('Unknown dataset type')
 
@@ -82,6 +82,7 @@ if __name__ == '__main__':
                                     transform=transform,
                                     start_frame=0,
                                     end_frame=-1)
+
         dataloader = DataLoader(dataset,
                                 batch_size=1,
                                 num_workers=0,
@@ -93,13 +94,26 @@ if __name__ == '__main__':
                             correct_scale=False,
                             fix_parts=('flow', 'stereo'))
         tartanvo.eval()
+        tartanvo.cuda()
         for index, sample in ColoredTqdm(enumerate(dataloader),
                                          total=len(dataloader),
                                          desc=subset):
             with torch.no_grad():
                 res = tartanvo(sample)
-            motion = res['motion']
-            motion_list.append(motion)
+                motion = res['motion']
+                motion_list.append(motion)
+
+            if index % 1000 == 0:
+                print(f'{index}/{len(dataloader)}')
+                del tartanvo
+                gc.collect()
+                torch.cuda.empty_cache()
+                tartanvo = TartanVO(vo_model_name=args.VO_MODEL,
+                                    pose_model_name=None,
+                                    correct_scale=False,
+                                    fix_parts=('flow', 'stereo'))
+                tartanvo.eval()
+                tartanvo.cuda()
 
         motion_list = torch.cat(motion_list, dim=0)
         poses = motion2pose_pypose(motion_list)
