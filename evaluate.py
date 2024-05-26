@@ -14,7 +14,7 @@ from tqdm import tqdm
 EDN2NED = pp.from_matrix(
     torch.tensor([[0., 0., 1., 0.], [1., 0., 0., 0.], [0., 1., 0., 0.],
                   [0., 0., 0., 1.]],
-                 dtype=torch.float32), pp.SE3_type)
+                 dtype=torch.float32), pp.SE3_type).to('cuda')
 
 
 class ColoredTqdm(tqdm):
@@ -80,7 +80,7 @@ if __name__ == '__main__':
                                     datatype=args.data_type,
                                     transform=transform,
                                     start_frame=0,
-                                    end_frame=-1)
+                                    end_frame=5)
         dataloader = DataLoader(dataset,
                                 batch_size=1,
                                 num_workers=0,
