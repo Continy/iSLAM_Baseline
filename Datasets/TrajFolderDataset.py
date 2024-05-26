@@ -131,35 +131,35 @@ class TartanAirTrajFolderLoader:
         self.vels = None
 
         ############################## load imu data ######################################################################
-        if isdir(datadir + '/imu'):
-            self.imu_dts = np.ones(len(self.rgbfiles) * 10,
-                                   dtype=np.float32) * 0.01
-            self.imu_ts = np.array([i for i in range(len(self.rgbfiles) * 10)],
-                                   dtype=np.float64) * 0.01
-            self.rgb2imu_sync = np.array(
-                [i for i in range(len(self.rgbfiles))]) * 10
-            self.rgb2imu_pose = pp.SE3([0, 0, 0, 0, 0, 0,
-                                        1]).to(dtype=torch.float32)
-            self.gravity = 0
+        # if isdir(datadir + '/imu'):
+        #     self.imu_dts = np.ones(len(self.rgbfiles) * 10,
+        #                            dtype=np.float32) * 0.01
+        #     self.imu_ts = np.array([i for i in range(len(self.rgbfiles) * 10)],
+        #                            dtype=np.float64) * 0.01
+        #     self.rgb2imu_sync = np.array(
+        #         [i for i in range(len(self.rgbfiles))]) * 10
+        #     self.rgb2imu_pose = pp.SE3([0, 0, 0, 0, 0, 0,
+        #                                 1]).to(dtype=torch.float32)
+        #     self.gravity = 0
 
-            imudir = datadir + '/imu'
-            # acceleration in the body frame
-            self.accels = np.load(imudir + '/acc_nograv_body.npy')
-            # angular rate in the body frame
-            self.gyros = np.load(imudir + '/gyro.npy')
-            # velocity in the world frame
-            self.vels = np.load(imudir + '/vel_global.npy')
+        #     imudir = datadir + '/imu'
+        #     # acceleration in the body frame
+        #     self.accels = np.load(imudir + '/acc_nograv_body.npy')
+        #     # angular rate in the body frame
+        #     self.gyros = np.load(imudir + '/gyro.npy')
+        #     # velocity in the world frame
+        #     self.vels = np.load(imudir + '/vel_global.npy')
 
-            with open(imudir + '/parameter.yaml', 'r') as file:
-                paras = yaml.safe_load(file)
-            self.accel_bias = np.array(paras['acc_zero_bias'],
-                                       dtype=np.float32)
-            self.gyro_bias = np.array(paras['gyro_zero_bias'],
-                                      dtype=np.float32)
+        #     with open(imudir + '/parameter.yaml', 'r') as file:
+        #         paras = yaml.safe_load(file)
+        #     self.accel_bias = np.array(paras['acc_zero_bias'],
+        #                                dtype=np.float32)
+        #     self.gyro_bias = np.array(paras['gyro_zero_bias'],
+        #                               dtype=np.float32)
 
-            self.has_imu = True
-        else:
-            self.has_imu = False
+        #     self.has_imu = True
+        # else:
+        #     self.has_imu = False
 
 
 class TartanAirV2TrajFolderLoader:
@@ -309,40 +309,40 @@ class EuRoCTrajFolderLoader:
         self.rgb_ts = np.array(timestamps).astype(np.float64) * 1e-3
 
         ############################## load imu data ######################################################################
-        if isfile(datadir + '/imu0/data.csv'):
-            df = pandas.read_csv(datadir + '/imu0/data.csv')
-            timestamps_imu = df.values[:, 0].astype(int) // int(1e6)
-            accels = df.values[:, 4:7].astype(np.float32)
-            gyros = df.values[:, 1:4].astype(np.float32)
+        # if isfile(datadir + '/imu0/data.csv'):
+        #     df = pandas.read_csv(datadir + '/imu0/data.csv')
+        #     timestamps_imu = df.values[:, 0].astype(int) // int(1e6)
+        #     accels = df.values[:, 4:7].astype(np.float32)
+        #     gyros = df.values[:, 1:4].astype(np.float32)
 
-            imu2pose_sync = sync_data(timestamps_pose, timestamps_imu)
-            # self.accels = accels - accel_bias[imu2pose_sync]
-            # self.gyros = gyros - gyro_bias[imu2pose_sync]
-            self.accels = accels
-            self.gyros = gyros
-            self.accel_bias = np.mean(accel_bias[imu2pose_sync], axis=0)
-            self.gyro_bias = np.mean(gyro_bias[imu2pose_sync], axis=0)
+        #     imu2pose_sync = sync_data(timestamps_pose, timestamps_imu)
+        #     # self.accels = accels - accel_bias[imu2pose_sync]
+        #     # self.gyros = gyros - gyro_bias[imu2pose_sync]
+        #     self.accels = accels
+        #     self.gyros = gyros
+        #     self.accel_bias = np.mean(accel_bias[imu2pose_sync], axis=0)
+        #     self.gyro_bias = np.mean(gyro_bias[imu2pose_sync], axis=0)
 
-            self.imu_dts = np.diff(timestamps_imu).astype(np.float32) * 1e-3
-            self.imu_ts = np.array(timestamps_imu).astype(np.float64) * 1e-3
+        #     self.imu_dts = np.diff(timestamps_imu).astype(np.float32) * 1e-3
+        #     self.imu_ts = np.array(timestamps_imu).astype(np.float64) * 1e-3
 
-            self.rgb2imu_sync = sync_data(timestamps_imu, timestamps)
+        #     self.rgb2imu_sync = sync_data(timestamps_imu, timestamps)
 
-            with open(datadir + '/imu0/sensor.yaml') as f:
-                res = yaml.load(f.read(), Loader=yaml.FullLoader)
-                T_BI = np.array(res['T_BS']['data'],
-                                dtype=np.float32).reshape(4, 4)
-                T_IL = np.matmul(np.linalg.inv(T_BI), T_BL)
-                self.rgb2imu_pose = pp.from_matrix(
-                    torch.tensor(T_IL),
-                    ltype=pp.SE3_type).to(dtype=torch.float32)
+        #     with open(datadir + '/imu0/sensor.yaml') as f:
+        #         res = yaml.load(f.read(), Loader=yaml.FullLoader)
+        #         T_BI = np.array(res['T_BS']['data'],
+        #                         dtype=np.float32).reshape(4, 4)
+        #         T_IL = np.matmul(np.linalg.inv(T_BI), T_BL)
+        #         self.rgb2imu_pose = pp.from_matrix(
+        #             torch.tensor(T_IL),
+        #             ltype=pp.SE3_type).to(dtype=torch.float32)
 
-            self.gravity = 9.81
+        #     self.gravity = 9.81
 
-            self.has_imu = True
+        #     self.has_imu = True
 
-        else:
-            self.has_imu = False
+        # else:
+        #     self.has_imu = False
 
 
 class KITTITrajFolderLoader:
