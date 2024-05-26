@@ -18,7 +18,8 @@ def sync_data(ts_src, ts_tar):
     res = []
     j = 0
     for t in ts_tar:
-        while j+1 < len(ts_src) and abs(ts_src[j+1]-t) <= abs(ts_src[j]-t):
+        while j + 1 < len(ts_src) and abs(ts_src[j + 1] - t) <= abs(ts_src[j] -
+                                                                    t):
             j += 1
         res.append(j)
     # for i in range(len(res)-1):
@@ -29,17 +30,16 @@ def sync_data(ts_src, ts_tar):
 
 def intrinsic2matrix(intrinsic):
     fx, fy, cx, cy = intrinsic
-    return np.array([
-        fx, 0, cx,
-        0, fy, cy,
-        0,  0,  1
-    ], dtype=np.float32).reshape(3, 3)
+    return np.array([fx, 0, cx, 0, fy, cy, 0, 0, 1],
+                    dtype=np.float32).reshape(3, 3)
+
 
 def matrix2intrinsic(m):
     return np.array([m[0, 0], m[1, 1], m[0, 2], m[1, 2]], dtype=np.float32)
 
 
-def stereo_rectify(left_intrinsic, left_distortion, right_intrinsic, right_distortion, width, height, right2left_pose):
+def stereo_rectify(left_intrinsic, left_distortion, right_intrinsic,
+                   right_distortion, width, height, right2left_pose):
     left_K = intrinsic2matrix(left_intrinsic).astype(np.float64)
     right_K = intrinsic2matrix(right_intrinsic).astype(np.float64)
     left_distortion = left_distortion.astype(np.float64)
@@ -47,37 +47,50 @@ def stereo_rectify(left_intrinsic, left_distortion, right_intrinsic, right_disto
     R = right2left_pose.Inv().rotation().matrix().numpy().astype(np.float64)
     T = right2left_pose.Inv().translation().numpy().astype(np.float64)
 
-    R1, R2, P1, P2, Q, roi1, roi2 = cv2.stereoRectify(
-        left_K, left_distortion, right_K, right_distortion,
-        (width, height), R, T, alpha=0
-    )
-    
-    left_map = cv2.initUndistortRectifyMap(left_K, left_distortion, R1, P1, (width, height), cv2.CV_32FC1)
-    right_map = cv2.initUndistortRectifyMap(right_K, right_distortion, R2, P2, (width, height), cv2.CV_32FC1)
+    R1, R2, P1, P2, Q, roi1, roi2 = cv2.stereoRectify(left_K,
+                                                      left_distortion,
+                                                      right_K,
+                                                      right_distortion,
+                                                      (width, height),
+                                                      R,
+                                                      T,
+                                                      alpha=0)
+
+    left_map = cv2.initUndistortRectifyMap(left_K, left_distortion, R1, P1,
+                                           (width, height), cv2.CV_32FC1)
+    right_map = cv2.initUndistortRectifyMap(right_K, right_distortion, R2, P2,
+                                            (width, height), cv2.CV_32FC1)
 
     left_intrinsic_new = matrix2intrinsic(P1)
     right_intrinsic_new = matrix2intrinsic(P2)
-    right2left_pose_new = pp.SE3([-P2[0,3]/P2[0,0],0,0, 0,0,0,1]).to(torch.float32)
+    right2left_pose_new = pp.SE3([-P2[0, 3] / P2[0, 0], 0, 0, 0, 0, 0,
+                                  1]).to(torch.float32)
 
     return left_intrinsic_new, right_intrinsic_new, right2left_pose_new, left_map, right_map
 
 
 class TartanAirTrajFolderLoader:
+
     def __init__(self, datadir):
 
         ############################## load images ######################################################################
         imgfolder = datadir + '/image_left'
         files = listdir(imgfolder)
-        self.rgbfiles = [(imgfolder +'/'+ ff) for ff in files if (ff.endswith('.png') or ff.endswith('.jpg'))]
+        self.rgbfiles = [(imgfolder + '/' + ff) for ff in files
+                         if (ff.endswith('.png') or ff.endswith('.jpg'))]
         self.rgbfiles.sort()
         self.rgb_dts = np.ones(len(self.rgbfiles), dtype=np.float32) * 0.1
-        self.rgb_ts = np.array([i for i in range(len(self.rgbfiles))], dtype=np.float64) * 0.1
+        self.rgb_ts = np.array([i for i in range(len(self.rgbfiles))],
+                               dtype=np.float64) * 0.1
 
         ############################## load stereo right images ######################################################################
         if isdir(datadir + '/image_right'):
             imgfolder = datadir + '/image_right'
             files = listdir(imgfolder)
-            self.rgbfiles_right = [(imgfolder +'/'+ ff) for ff in files if (ff.endswith('.png') or ff.endswith('.jpg'))]
+            self.rgbfiles_right = [
+                (imgfolder + '/' + ff) for ff in files
+                if (ff.endswith('.png') or ff.endswith('.jpg'))
+            ]
             self.rgbfiles_right.sort()
         else:
             self.rgbfiles_right = None
@@ -86,7 +99,8 @@ class TartanAirTrajFolderLoader:
         if isdir(datadir + '/flow'):
             imgfolder = datadir + '/flow'
             files = listdir(imgfolder)
-            self.flowfiles = [(imgfolder +'/'+ ff) for ff in files if ff.endswith('_flow.npy')]
+            self.flowfiles = [(imgfolder + '/' + ff) for ff in files
+                              if ff.endswith('_flow.npy')]
             self.flowfiles.sort()
         else:
             self.flowfiles = None
@@ -95,15 +109,19 @@ class TartanAirTrajFolderLoader:
         if isdir(datadir + '/depth_left'):
             imgfolder = datadir + '/depth_left'
             files = listdir(imgfolder)
-            self.depthfiles = [(imgfolder +'/'+ ff) for ff in files if ff.endswith('_depth.npy')]
+            self.depthfiles = [(imgfolder + '/' + ff) for ff in files
+                               if ff.endswith('_depth.npy')]
             self.depthfiles.sort()
         else:
             self.depthfiles = None
 
         ############################## load calibrations ######################################################################
-        self.intrinsic = np.array([320.0, 320.0, 320.0, 240.0], dtype=np.float32)
-        self.intrinsic_right = np.array([320.0, 320.0, 320.0, 240.0], dtype=np.float32)
-        self.right2left_pose = pp.SE3([0, 0.25, 0,   0, 0, 0, 1]).to(dtype=torch.float32)
+        self.intrinsic = np.array([320.0, 320.0, 320.0, 240.0],
+                                  dtype=np.float32)
+        self.intrinsic_right = np.array([320.0, 320.0, 320.0, 240.0],
+                                        dtype=np.float32)
+        self.right2left_pose = pp.SE3([0, 0.25, 0, 0, 0, 0,
+                                       1]).to(dtype=torch.float32)
         # self.right2left_pose = np.array([0, 0.25, 0,   0, 0, 0, 1], dtype=np.float32)
         self.require_undistort = False
 
@@ -114,10 +132,14 @@ class TartanAirTrajFolderLoader:
 
         ############################## load imu data ######################################################################
         if isdir(datadir + '/imu'):
-            self.imu_dts = np.ones(len(self.rgbfiles)*10, dtype=np.float32) * 0.01
-            self.imu_ts = np.array([i for i in range(len(self.rgbfiles)*10)], dtype=np.float64) * 0.01
-            self.rgb2imu_sync = np.array([i for i in range(len(self.rgbfiles))]) * 10
-            self.rgb2imu_pose = pp.SE3([0, 0, 0,   0, 0, 0, 1]).to(dtype=torch.float32)
+            self.imu_dts = np.ones(len(self.rgbfiles) * 10,
+                                   dtype=np.float32) * 0.01
+            self.imu_ts = np.array([i for i in range(len(self.rgbfiles) * 10)],
+                                   dtype=np.float64) * 0.01
+            self.rgb2imu_sync = np.array(
+                [i for i in range(len(self.rgbfiles))]) * 10
+            self.rgb2imu_pose = pp.SE3([0, 0, 0, 0, 0, 0,
+                                        1]).to(dtype=torch.float32)
             self.gravity = 0
 
             imudir = datadir + '/imu'
@@ -130,13 +152,80 @@ class TartanAirTrajFolderLoader:
 
             with open(imudir + '/parameter.yaml', 'r') as file:
                 paras = yaml.safe_load(file)
-            self.accel_bias = np.array(paras['acc_zero_bias'], dtype=np.float32)
-            self.gyro_bias = np.array(paras['gyro_zero_bias'], dtype=np.float32)
+            self.accel_bias = np.array(paras['acc_zero_bias'],
+                                       dtype=np.float32)
+            self.gyro_bias = np.array(paras['gyro_zero_bias'],
+                                      dtype=np.float32)
 
             self.has_imu = True
+        else:
+            self.has_imu = False
+
+
+class TartanAirV2TrajFolderLoader:
+
+    def __init__(self, datadir):
+
+        ############################## load images ######################################################################
+        imgfolder = datadir + '/image_lcam_front'
+        files = listdir(imgfolder)
+        self.rgbfiles = [(imgfolder + '/' + ff) for ff in files
+                         if (ff.endswith('.png') or ff.endswith('.jpg'))]
+        self.rgbfiles.sort()
+        self.rgb_dts = np.ones(len(self.rgbfiles), dtype=np.float32) * 0.1
+        self.rgb_ts = np.array([i for i in range(len(self.rgbfiles))],
+                               dtype=np.float64) * 0.1
+
+        ############################## load stereo right images ######################################################################
+        if isdir(datadir + '/image_rcam_front'):
+            imgfolder = datadir + '/image_rcam_front'
+            files = listdir(imgfolder)
+            self.rgbfiles_right = [
+                (imgfolder + '/' + ff) for ff in files
+                if (ff.endswith('.png') or ff.endswith('.jpg'))
+            ]
+            self.rgbfiles_right.sort()
+        else:
+            self.rgbfiles_right = None
+
+        ############################## load flow ######################################################################
+        if isdir(datadir + '/flow'):
+            imgfolder = datadir + '/flow'
+            files = listdir(imgfolder)
+            self.flowfiles = [(imgfolder + '/' + ff) for ff in files
+                              if ff.endswith('_flow.npy')]
+            self.flowfiles.sort()
+        else:
+            self.flowfiles = None
+
+        ############################## load depth ######################################################################
+        if isdir(datadir + '/depth_lcam_front'):
+            imgfolder = datadir + '/depth_lcam_front'
+            files = listdir(imgfolder)
+            self.depthfiles = [(imgfolder + '/' + ff) for ff in files
+                               if ff.endswith('_depth.npy')]
+            self.depthfiles.sort()
+        else:
+            self.depthfiles = None
+
+        ############################## load calibrations ######################################################################
+        self.intrinsic = np.array([320.0, 320.0, 320.0, 320.0],
+                                  dtype=np.float32)
+        self.intrinsic_right = np.array([320.0, 320.0, 320.0, 320.0],
+                                        dtype=np.float32)
+        self.right2left_pose = pp.SE3([0, 0.25, 0, 0, 0, 0,
+                                       1]).to(dtype=torch.float32)
+        # self.right2left_pose = np.array([0, 0.25, 0,   0, 0, 0, 1], dtype=np.float32)
+        self.require_undistort = False
+
+        ############################## load gt poses ######################################################################
+        posefile = datadir + '/pose_lcam_front.txt'
+        self.poses = np.loadtxt(posefile).astype(np.float32)
+        self.vels = None
 
 
 class EuRoCTrajFolderLoader:
+
     def __init__(self, datadir):
         all_timestamps = []
 
@@ -159,25 +248,32 @@ class EuRoCTrajFolderLoader:
         with open(datadir + '/cam0/sensor.yaml') as f:
             res = yaml.load(f.read(), Loader=yaml.FullLoader)
             self.intrinsic = np.array(res['intrinsics'], dtype=np.float32)
-            distortion = np.array(res['distortion_coefficients'], dtype=np.float32)
-            T_BL = np.array(res['T_BS']['data'], dtype=np.float32).reshape(4, 4)
-        
+            distortion = np.array(res['distortion_coefficients'],
+                                  dtype=np.float32)
+            T_BL = np.array(res['T_BS']['data'],
+                            dtype=np.float32).reshape(4, 4)
+
         if self.rgbfiles_right is not None:
             with open(datadir + '/cam1/sensor.yaml') as f:
                 res = yaml.load(f.read(), Loader=yaml.FullLoader)
-                self.intrinsic_right = np.array(res['intrinsics'], dtype=np.float32)
-                distortion_right = np.array(res['distortion_coefficients'], dtype=np.float32)
-                T_BR = np.array(res['T_BS']['data'], dtype=np.float32).reshape(4, 4)
+                self.intrinsic_right = np.array(res['intrinsics'],
+                                                dtype=np.float32)
+                distortion_right = np.array(res['distortion_coefficients'],
+                                            dtype=np.float32)
+                T_BR = np.array(res['T_BS']['data'],
+                                dtype=np.float32).reshape(4, 4)
 
         if self.rgbfiles_right is not None:
             T_LR = np.matmul(np.linalg.inv(T_BL), T_BR)
-            self.right2left_pose = pp.from_matrix(torch.tensor(T_LR), ltype=pp.SE3_type).to(dtype=torch.float32)
+            self.right2left_pose = pp.from_matrix(
+                torch.tensor(T_LR), ltype=pp.SE3_type).to(dtype=torch.float32)
 
             self.require_undistort = True
             img = cv2.imread(self.rgbfiles_right[0])
             h, w = img.shape[:2]
-            self.intrinsic, self.intrinsic_right, self.right2left_pose, self.imgmap, self.imgmap_right=stereo_rectify(
-                self.intrinsic, distortion, self.intrinsic_right, distortion_right, w, h, self.right2left_pose)
+            self.intrinsic, self.intrinsic_right, self.right2left_pose, self.imgmap, self.imgmap_right = stereo_rectify(
+                self.intrinsic, distortion, self.intrinsic_right,
+                distortion_right, w, h, self.right2left_pose)
         else:
             self.require_undistort = False
 
@@ -185,7 +281,7 @@ class EuRoCTrajFolderLoader:
         df = pandas.read_csv(datadir + '/state_groundtruth_estimate0/data.csv')
         timestamps_pose = df.values[:, 0].astype(int) // int(1e6)
         all_timestamps.append(timestamps_pose)
-        self.poses = df.values[:, (1,2,3, 5,6,7,4)].astype(np.float32)
+        self.poses = df.values[:, (1, 2, 3, 5, 6, 7, 4)].astype(np.float32)
         self.vels = df.values[:, 8:11].astype(np.float32)
         accel_bias = df.values[:, 14:17].astype(np.float32)
         gyro_bias = df.values[:, 11:14].astype(np.float32)
@@ -194,11 +290,19 @@ class EuRoCTrajFolderLoader:
         timestamps = set(all_timestamps[0])
         for i in range(1, len(all_timestamps)):
             timestamps = timestamps.intersection(set(all_timestamps[i]))
-        self.rgbfiles = self.rgbfiles[[i for i, t in enumerate(timestamps_left) if t in timestamps]]
+        self.rgbfiles = self.rgbfiles[[
+            i for i, t in enumerate(timestamps_left) if t in timestamps
+        ]]
         if self.rgbfiles_right is not None:
-            self.rgbfiles_right = self.rgbfiles_right[[i for i, t in enumerate(timestamps_right) if t in timestamps]]
-        self.poses = self.poses[[i for i, t in enumerate(timestamps_pose) if t in timestamps]]
-        self.vels = self.vels[[i for i, t in enumerate(timestamps_pose) if t in timestamps]]
+            self.rgbfiles_right = self.rgbfiles_right[[
+                i for i, t in enumerate(timestamps_right) if t in timestamps
+            ]]
+        self.poses = self.poses[[
+            i for i, t in enumerate(timestamps_pose) if t in timestamps
+        ]]
+        self.vels = self.vels[[
+            i for i, t in enumerate(timestamps_pose) if t in timestamps
+        ]]
         timestamps = np.array(list(timestamps))
         timestamps.sort()
         self.rgb_dts = np.diff(timestamps).astype(np.float32) * 1e-3
@@ -221,14 +325,17 @@ class EuRoCTrajFolderLoader:
 
             self.imu_dts = np.diff(timestamps_imu).astype(np.float32) * 1e-3
             self.imu_ts = np.array(timestamps_imu).astype(np.float64) * 1e-3
-            
+
             self.rgb2imu_sync = sync_data(timestamps_imu, timestamps)
 
             with open(datadir + '/imu0/sensor.yaml') as f:
                 res = yaml.load(f.read(), Loader=yaml.FullLoader)
-                T_BI = np.array(res['T_BS']['data'], dtype=np.float32).reshape(4, 4)
+                T_BI = np.array(res['T_BS']['data'],
+                                dtype=np.float32).reshape(4, 4)
                 T_IL = np.matmul(np.linalg.inv(T_BI), T_BL)
-                self.rgb2imu_pose = pp.from_matrix(torch.tensor(T_IL), ltype=pp.SE3_type).to(dtype=torch.float32)
+                self.rgb2imu_pose = pp.from_matrix(
+                    torch.tensor(T_IL),
+                    ltype=pp.SE3_type).to(dtype=torch.float32)
 
             self.gravity = 9.81
 
@@ -239,6 +346,7 @@ class EuRoCTrajFolderLoader:
 
 
 class KITTITrajFolderLoader:
+
     def __init__(self, datadir):
         import pykitti
 
@@ -283,23 +391,28 @@ class KITTITrajFolderLoader:
 
         ############################## load calibrations ######################################################################
         K = dataset.calib.K_cam2
-        self.intrinsic = np.array([K[0,0], K[1,1], K[0,2], K[1,2]])
+        self.intrinsic = np.array([K[0, 0], K[1, 1], K[0, 2], K[1, 2]])
         K = dataset.calib.K_cam3
-        self.intrinsic_right = np.array([K[0,0], K[1,1], K[0,2], K[1,2]])
+        self.intrinsic_right = np.array([K[0, 0], K[1, 1], K[0, 2], K[1, 2]])
 
         T_LI = dataset.calib.T_cam2_imu
         T_RI = dataset.calib.T_cam3_imu
         T_LR = np.matmul(T_LI, np.linalg.inv(T_RI))
-        self.right2left_pose = pp.from_matrix(torch.tensor(T_LR), ltype=pp.SE3_type).to(dtype=torch.float32)
+        self.right2left_pose = pp.from_matrix(
+            torch.tensor(T_LR), ltype=pp.SE3_type).to(dtype=torch.float32)
 
         self.require_undistort = False
 
         ############################## load gt poses ######################################################################
         T_w_imu = np.array([oxts_frame.T_w_imu for oxts_frame in dataset.oxts])
         T_w_imu = T_w_imu[self.rgb2imu_sync]
-        self.poses = pp.from_matrix(torch.tensor(T_w_imu), ltype=pp.SE3_type).to(dtype=torch.float32)
-        
-        vels_local = torch.tensor([[oxts_frame.packet.vf, oxts_frame.packet.vl, oxts_frame.packet.vu] for oxts_frame in dataset.oxts], dtype=torch.float32)
+        self.poses = pp.from_matrix(torch.tensor(T_w_imu),
+                                    ltype=pp.SE3_type).to(dtype=torch.float32)
+
+        vels_local = torch.tensor([[
+            oxts_frame.packet.vf, oxts_frame.packet.vl, oxts_frame.packet.vu
+        ] for oxts_frame in dataset.oxts],
+                                  dtype=torch.float32)
         vels_local = vels_local[self.rgb2imu_sync]
         self.vels = self.poses.rotation() @ vels_local
 
@@ -307,8 +420,12 @@ class KITTITrajFolderLoader:
         self.vels = self.vels.numpy()
 
         ############################## load imu data ######################################################################
-        self.accels = np.array([[oxts_frame.packet.ax, oxts_frame.packet.ay, oxts_frame.packet.az] for oxts_frame in dataset.oxts]).astype(np.float32)
-        self.gyros = np.array([[oxts_frame.packet.wx, oxts_frame.packet.wy, oxts_frame.packet.wz] for oxts_frame in dataset.oxts]).astype(np.float32)
+        self.accels = np.array([[
+            oxts_frame.packet.ax, oxts_frame.packet.ay, oxts_frame.packet.az
+        ] for oxts_frame in dataset.oxts]).astype(np.float32)
+        self.gyros = np.array([[
+            oxts_frame.packet.wx, oxts_frame.packet.wy, oxts_frame.packet.wz
+        ] for oxts_frame in dataset.oxts]).astype(np.float32)
 
         self.accel_bias = np.zeros(3, dtype=np.float32)
         self.gyro_bias = np.zeros(3, dtype=np.float32)
@@ -317,7 +434,8 @@ class KITTITrajFolderLoader:
         self.imu_ts = np.array(ts_imu).astype(np.float64) - ts_imu[0]
 
         T_IL = np.linalg.inv(T_LI)
-        self.rgb2imu_pose = pp.from_matrix(torch.tensor(T_IL), ltype=pp.SE3_type).to(dtype=torch.float32)
+        self.rgb2imu_pose = pp.from_matrix(
+            torch.tensor(T_IL), ltype=pp.SE3_type).to(dtype=torch.float32)
 
         self.gravity = 9.81
 
@@ -325,10 +443,8 @@ class KITTITrajFolderLoader:
 
     def load_timestamps(self, datapath, subfolder):
         import datetime as dt
-
         """Load timestamps from file."""
-        timestamp_file = os.path.join(
-            datapath, subfolder, 'timestamps.txt')
+        timestamp_file = os.path.join(datapath, subfolder, 'timestamps.txt')
 
         # Read and parse the timestamps
         timestamps = []
@@ -345,10 +461,19 @@ class KITTITrajFolderLoader:
 
 
 class TrajFolderDatasetBase(Dataset):
-    def __init__(self, datadir, datatype, transform=None, start_frame=0, end_frame=-1, loader=None):
+
+    def __init__(self,
+                 datadir,
+                 datatype,
+                 transform=None,
+                 start_frame=0,
+                 end_frame=-1,
+                 loader=None):
         if loader is None:
-            if datatype == 'tartanair':
+            if datatype == 'v1':
                 loader = TartanAirTrajFolderLoader(datadir)
+            elif datatype == 'v2':
+                loader = TartanAirV2TrajFolderLoader(datadir)
             elif datatype == 'euroc':
                 loader = EuRoCTrajFolderLoader(datadir)
             elif datatype == 'kitti':
@@ -363,9 +488,9 @@ class TrajFolderDatasetBase(Dataset):
         self.start_frame = start_frame
         self.end_frame = end_frame
         self.loader = loader
-        
+
         self.rgbfiles = loader.rgbfiles[start_frame:end_frame]
-        self.rgb_dts = loader.rgb_dts[start_frame:end_frame-1]
+        self.rgb_dts = loader.rgb_dts[start_frame:end_frame - 1]
         self.rgb_ts = loader.rgb_ts[start_frame:end_frame]
         self.num_img = len(self.rgbfiles)
 
@@ -375,7 +500,7 @@ class TrajFolderDatasetBase(Dataset):
             self.rgbfiles_right = None
 
         try:
-            self.flowfiles = loader.flowfiles[start_frame:end_frame-1]
+            self.flowfiles = loader.flowfiles[start_frame:end_frame - 1]
         except:
             self.flowfiles = None
 
@@ -406,11 +531,15 @@ class TrajFolderDatasetBase(Dataset):
 
             self.accels = loader.accels[start_imu:end_imu]
             self.gyros = loader.gyros[start_imu:end_imu]
-            self.imu_dts = loader.imu_dts[start_imu:end_imu-1]
+            self.imu_dts = loader.imu_dts[start_imu:end_imu - 1]
             self.imu_ts = loader.imu_ts[start_imu:end_imu]
-            
+
             self.rgb2imu_pose = loader.rgb2imu_pose
-            self.imu_init = {'rot':self.poses[0, 3:], 'pos':self.poses[0, :3], 'vel':self.vels[0]}
+            self.imu_init = {
+                'rot': self.poses[0, 3:],
+                'pos': self.poses[0, :3],
+                'vel': self.vels[0]
+            }
             self.gravity = loader.gravity
 
             self.accel_bias = loader.accel_bias
@@ -439,11 +568,20 @@ class TrajFolderDatasetBase(Dataset):
 
 
 class TrajFolderDataset(TrajFolderDatasetBase):
-    def __init__(self, datadir, datatype, transform=None, start_frame=0, end_frame=-1, loader=None, links=None):
-        super(TrajFolderDataset, self).__init__(datadir, datatype, transform, start_frame, end_frame, loader)
+
+    def __init__(self,
+                 datadir,
+                 datatype,
+                 transform=None,
+                 start_frame=0,
+                 end_frame=-1,
+                 loader=None,
+                 links=None):
+        super(TrajFolderDataset, self).__init__(datadir, datatype, transform,
+                                                start_frame, end_frame, loader)
 
         if links is None:
-            self.links = [[i, i+1] for i in range(self.num_img-1)]
+            self.links = [[i, i + 1] for i in range(self.num_img - 1)]
         else:
             self.links = links
         self.num_link = len(self.links)
@@ -452,7 +590,7 @@ class TrajFolderDataset(TrajFolderDatasetBase):
 
     def __getitem__(self, idx):
         return self.get_pair(self.links[idx][0], self.links[idx][1])
-    
+
     def __len__(self):
         return self.num_link
 
@@ -464,7 +602,7 @@ class TrajFolderDataset(TrajFolderDatasetBase):
         matrix = pose2motion(SEs, links=links)
         motions = SEs2ses(matrix).astype(np.float32)
         return motions
-    
+
     def undistort(self, img, is_right=False):
         if not self.require_undistort:
             return img
@@ -491,7 +629,10 @@ class TrajFolderDataset(TrajFolderDatasetBase):
             res['img1_r'] = [img1_r]
 
         h, w, _ = img0.shape
-        intrinsicLayer = make_intrinsics_layer(w, h, self.intrinsic[0], self.intrinsic[1], self.intrinsic[2], self.intrinsic[3])
+        intrinsicLayer = make_intrinsics_layer(w, h, self.intrinsic[0],
+                                               self.intrinsic[1],
+                                               self.intrinsic[2],
+                                               self.intrinsic[3])
         res['intrinsic'] = [intrinsicLayer]
 
         res['intrinsic_calib'] = self.intrinsic.copy()
@@ -505,7 +646,8 @@ class TrajFolderDataset(TrajFolderDatasetBase):
 
         res['datatype'] = self.datatype
 
-        res['motion'] = (pp.SE3(self.poses[i]).Inv() @ pp.SE3(self.poses[j])).numpy()
+        res['motion'] = (
+            pp.SE3(self.poses[i]).Inv() @ pp.SE3(self.poses[j])).numpy()
 
         if self.right2left_pose != None:
             res['extrinsic'] = self.right2left_pose.clone().numpy()
@@ -516,4 +658,3 @@ class TrajFolderDataset(TrajFolderDatasetBase):
         res['img1_r_file'] = self.rgbfiles_right[j]
 
         return res
-    

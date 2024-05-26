@@ -1,0 +1,6 @@
+#
+ROOT: D:/Data/TartanAir
+TYPE: tartanv1
+DATASETS: [seasidetown/Data/P000, seasidetown/Data/P001, seasidetown/Data/P002, seasidetown/Data/P003]
+VO_MODEL: ./models/stereo_cvt_tartanvo_1914.pkl
+POSE_MODEL: null

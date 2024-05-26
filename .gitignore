@@ -17,3 +17,4 @@ wandb/
 *.npy
 *.html
 *.ipynb
+.vscode/
