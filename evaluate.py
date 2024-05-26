@@ -80,7 +80,7 @@ if __name__ == '__main__':
                                     datatype=args.data_type,
                                     transform=transform,
                                     start_frame=0,
-                                    end_frame=5)
+                                    end_frame=-1)
         dataloader = DataLoader(dataset,
                                 batch_size=1,
                                 num_workers=0,
