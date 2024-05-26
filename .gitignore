@@ -18,3 +18,4 @@ wandb/
 *.html
 *.ipynb
 .vscode/
+Results/

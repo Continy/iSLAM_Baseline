@@ -111,4 +111,3 @@ if __name__ == '__main__':
         np.save(Path(args.savepath) / 'npy' / f'{subset}.npy', poses_np)
         np.savetxt(Path(args.savepath) / 'txt' / f'{subset}.txt', poses_np)
         print(f'{path} done')
-        exit()
