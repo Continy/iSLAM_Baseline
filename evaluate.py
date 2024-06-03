@@ -49,14 +49,7 @@ if __name__ == '__main__':
     cfg = parser.parse_args()
     args = build_cfg(cfg.config)
     args.update(vars(cfg))
-    if args.data_type == 'v1':
-        cropsize = (448, 640)
-    elif args.data_type == 'v2':
-        cropsize = (640, 640)
-    elif args.data_type == 'euroc':
-        cropsize = (448, 704)
-    else:
-        raise ValueError('Unknown dataset type')
+    cropsize = (448, 640)
 
     root = args.ROOT
 
@@ -99,7 +92,7 @@ if __name__ == '__main__':
                                          total=len(dataloader),
                                          desc=subset):
             with torch.no_grad():
-                res = tartanvo(sample)
+                res = tartanvo(sample, is_train=False)
                 motion = res['motion']
                 motion_list.append(motion)
 

@@ -1,0 +1,7 @@
+#
+ROOT: /data2/datasets/yutianch/KITTI_odometry/dataset/sequences
+TYPE: kitti
+DATASETS:
+  ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
+VO_MODEL: ./models/stereo_cvt_tartanvo_1914.pkl
+POSE_MODEL: null
